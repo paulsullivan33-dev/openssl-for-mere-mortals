@@ -1,0 +1,24 @@
+site_name: OpenSSL for Mere Mortals
+site_description: Plain-language OpenSSL — keys, certificates, chains of trust, and live TLS, taught inside a throwaway lab CA where every classic failure is produced on purpose and read in the tool's own words.
+site_url: https://paulsullivan33-dev.github.io/openssl-for-mere-mortals/
+
+# Guides live at the repo root (nice for GitHub browsing).
+# The deploy workflow copies them into docs/ before building.
+theme:
+  name: material
+
+nav:
+  - Home: index.md
+  - What OpenSSL Is: what-openssl-is.md
+  - The Vocabulary: the-vocabulary.md
+  - Meet OpenSSL: meet-openssl.md
+  - Looking at Certificates: looking-at-certificates.md
+  - Keys: keys.md
+  - CSRs and Self-Signed Certificates: csrs-and-self-signed.md
+  - Be Your Own CA: be-your-own-ca.md
+  - TLS in Practice: tls-in-practice.md
+  - Hashes, HMAC and Symmetric Encryption: hashes-hmac-and-encryption.md
+  - Converting and Bundling: converting-and-bundling.md
+  - Troubleshooting: troubleshooting.md
+  - Glossary: glossary.md
+  - Writing Criteria: criteria.md

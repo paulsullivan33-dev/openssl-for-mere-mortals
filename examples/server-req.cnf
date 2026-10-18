@@ -1,0 +1,12 @@
+# A request config: names and extensions in a file, not on the command line.
+[ req ]
+distinguished_name = dn
+req_extensions     = ext
+prompt             = no
+
+[ dn ]
+CN = server.example.test
+O  = Example Lab
+
+[ ext ]
+subjectAltName = DNS:server.example.test, IP:127.0.0.1

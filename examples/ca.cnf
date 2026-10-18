@@ -1,0 +1,74 @@
+# A minimal two-level CA configuration for the OpenSSL guide's lab.
+# One file drives two CAs: switch with `openssl ca -name CA_root`
+# (the default below is the intermediate, the one that signs servers).
+
+[ ca ]
+default_ca = CA_inter
+
+[ CA_root ]
+dir            = ./root
+database       = $dir/index.txt
+serial         = $dir/serial
+new_certs_dir  = $dir/newcerts
+private_key    = $dir/private/root.key.pem
+certificate    = $dir/root.cert.pem
+default_md     = sha256
+default_days   = 365
+policy         = policy_any
+unique_subject = no
+
+[ CA_inter ]
+dir            = ./inter
+database       = $dir/index.txt
+serial         = $dir/serial
+new_certs_dir  = $dir/newcerts
+private_key    = $dir/private/inter.key.pem
+certificate    = $dir/inter.cert.pem
+default_md     = sha256
+default_days   = 365
+policy         = policy_any
+unique_subject = no
+
+[ policy_any ]
+commonName             = supplied
+countryName            = optional
+stateOrProvinceName    = optional
+localityName           = optional
+organizationName       = optional
+organizationalUnitName = optional
+emailAddress           = optional
+
+[ v3_root_ca ]
+basicConstraints       = critical, CA:true
+keyUsage               = critical, keyCertSign, cRLSign
+subjectKeyIdentifier   = hash
+
+[ v3_inter_ca ]
+basicConstraints       = critical, CA:true, pathlen:0
+keyUsage               = critical, keyCertSign, cRLSign
+subjectKeyIdentifier   = hash
+authorityKeyIdentifier = keyid:always
+
+[ v3_server ]
+basicConstraints       = CA:false
+keyUsage               = digitalSignature, keyEncipherment
+extendedKeyUsage       = serverAuth
+subjectKeyIdentifier   = hash
+authorityKeyIdentifier = keyid:always
+subjectAltName         = DNS:server.example.test, IP:127.0.0.1
+
+[ v3_expired ]
+basicConstraints       = CA:false
+keyUsage               = digitalSignature, keyEncipherment
+extendedKeyUsage       = serverAuth
+subjectKeyIdentifier   = hash
+authorityKeyIdentifier = keyid:always
+subjectAltName         = DNS:server.example.test, IP:127.0.0.1
+
+[ v3_wronghost ]
+basicConstraints       = CA:false
+keyUsage               = digitalSignature, keyEncipherment
+extendedKeyUsage       = serverAuth
+subjectKeyIdentifier   = hash
+authorityKeyIdentifier = keyid:always
+subjectAltName         = DNS:other.example.test

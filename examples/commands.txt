@@ -1,0 +1,115 @@
+OpenSSL commands — the everyday set from "OpenSSL for Mere Mortals"
+====================================================================
+
+Every output quoted in the guide was captured
+from OpenSSL 3.0.13, mostly against the lab
+that lab-setup.sh builds: a root CA, an
+intermediate, a server certificate for
+server.example.test, and its expired,
+wrong-name, and self-signed counterparts.
+
+
+LOOKING
+-------
+    openssl version               which OpenSSL this is
+    openssl version -a            build details, OPENSSLDIR
+    openssl help                  the subcommand families
+    openssl x509 -help            one subcommand's options
+    openssl list -providers       algorithm providers loaded
+    openssl list -digest-algorithms   hashes on offer
+    openssl ciphers -v            TLS cipher suites, in words
+    openssl errstr 1608010C       decode a bare error code
+
+
+READING CERTIFICATES
+--------------------
+    openssl x509 -in cert.pem -noout -subject -issuer -dates
+    openssl x509 -in cert.pem -noout -ext subjectAltName
+    openssl x509 -in cert.pem -noout -serial -fingerprint -sha256
+    openssl x509 -in cert.pem -noout -text        everything
+    openssl x509 -in cert.pem -noout -modulus     for the match below
+    openssl rsa -in key.pem -noout -modulus       same number = same pair
+    openssl req -in req.csr.pem -noout -subject   read a CSR back
+
+
+KEYS
+----
+    openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out rsa.key.pem
+    openssl genpkey -algorithm EC -pkeyopt group:P-256 -out ec.key.pem
+    openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 \
+        -aes-256-cbc -pass pass:... -out enc.key.pem    a locked key
+    openssl pkey -in key.pem -text -noout          read a key (careful:
+                                                   -text shows the secret)
+    openssl pkey -in key.pem -pubout -out key.pub.pem  the public half
+
+
+REQUESTS AND SELF-SIGNED
+------------------------
+    openssl req -new -key key.pem -out req.csr.pem -subj "/CN=name/O=Org"
+    openssl req -new -key key.pem -out req.csr.pem -config server-req.cnf
+    openssl req -x509 -newkey rsa:2048 -keyout k.pem -out c.pem \
+        -days 365 -nodes -subj "/CN=name" \
+        -addext "subjectAltName=DNS:name,IP:127.0.0.1"   self-signed
+
+
+BEING A CA  (config: ca.cnf; database + serial files first)
+-----------------------------------------------------------
+    openssl req -new -x509 -key root.key.pem -out root.cert.pem \
+        -days 3650 -config ca.cnf -extensions v3_root_ca   the root
+    openssl ca -config ca.cnf -name CA_root \
+        -extensions v3_inter_ca -in inter.csr.pem \
+        -out inter.cert.pem -batch -notext                 sign a CA
+    openssl ca -config ca.cnf -extensions v3_server \
+        -in server.csr.pem -out server.cert.pem \
+        -batch -notext                                     sign a server
+    openssl ca -config ca.cnf -extensions v3_expired \
+        -startdate 20240101000000Z -enddate 20250101000000Z \
+        -in server.csr.pem -out expired.cert.pem \
+        -batch -notext                 history, minted on purpose
+
+
+VERIFYING
+---------
+    openssl verify -CAfile root.cert.pem \
+        -untrusted inter.cert.pem server.cert.pem          OK
+    openssl verify -CAfile root.cert.pem cert.pem          20: no chain
+    openssl verify selfsigned.cert.pem                     18: self-signed
+    openssl verify -CAfile root.cert.pem -untrusted inter.cert.pem \
+        -verify_hostname right.name wrong.cert.pem         62: wrong name
+    (10 = expired, 19 = chain ends at an untrusted root)
+
+
+TLS
+---
+    openssl s_server -accept 8443 -key server.key.pem \
+        -cert server.cert.pem -cert_chain chain.pem -www
+    openssl s_client -connect 127.0.0.1:8443 \
+        -CAfile root.cert.pem -verify_hostname server.example.test
+    openssl s_client -connect host:8443 -verify_return_error
+        (without this flag s_client connects despite failure)
+    openssl s_client -connect host:8443 -tls1_2 | -tls1_3
+        pin a version; alert 70 is the refusal
+
+
+HASHES, MAC, ENCRYPTION
+-----------------------
+    openssl dgst -sha256 file                 a file's fingerprint
+    openssl dgst -sha256 -hmac "key" file       keyed proof (HMAC)
+    openssl mac -macopt key:... -macopt digest:SHA256 HMAC < file
+    openssl enc -aes-256-cbc -salt -pbkdf2 -in f -out f.enc -pass pass:...
+    openssl enc -aes-256-cbc -d -pbkdf2 -in f.enc -pass pass:...
+        (always -pbkdf2; bare enc warns, and means it)
+    openssl rand -hex 16                        honest randomness
+    openssl base64 / openssl base64 -d          the PEM encoding itself
+
+
+FORMATS
+-------
+    openssl x509 -in c.pem -out c.der -outform DER
+    openssl x509 -in c.der -inform DER -out c.pem
+    cat leaf.pem inter.pem > chain.pem          a bundle is just cat
+    openssl pkcs12 -export -name "Label" -inkey k.pem -in c.pem \
+        -certfile chain.pem -out bundle.p12 -passout pass:...
+    openssl pkcs12 -in bundle.p12 -passin pass:... -info -noout
+    openssl crl2pkcs7 -nocrl -certfile chain.pem -out bundle.p7b \
+        -outform DER
